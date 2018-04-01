@@ -4,11 +4,13 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server/server.js"
   },
   "author": "Daniel Marcano",
   "license": "ISC",
   "dependencies": {
+    "express": "^4.16.3",
     "mongodb": "^3.0.5",
     "mongoose": "^5.0.12"
   }
