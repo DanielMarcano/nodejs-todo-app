@@ -8,7 +8,7 @@
     "rules": {
       "no-var": [ "error" ],
         "indent": [
-            "error",
+            "warn",
             2
         ],
         "no-unused-vars": [0],

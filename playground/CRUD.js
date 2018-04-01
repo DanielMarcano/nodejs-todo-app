@@ -3,36 +3,41 @@ const assert = require('assert');
 
 MongoClient.connect('mongodb://localhost:27017', (err, client) => {
   const db = client.db('TodoApp');
-  findUsers(db, 2, showResult);
+  updateDoc(db, showResult);
   client.close();
 });
 
-let insertUser = (db, callback) => {
-  let collection = returnCollection(db, 'users');
-  collection.insertOne({name: 'Daniel', age: 21, location: 'Barcelona, Spain'}, (err, result) => {
+let insertDoc = (db, callback) => {
+  let collection = returnCollection(db, 'todos');
+  collection.insertOne({text: 'Take the garbage out', completed: true}, (err, result) => {
     assert.equal(null, err);
     assert.equal(1, result.ops.length);
-    callback(`The user was successfully added`);
+    callback(`The todo was successfully added`);
   });
 };
 
 let showResult = result => console.log(`${JSON.stringify(result, null, 2)}`);
 
-let deleteUser = (db, callback) => {
+let deleteDoc = (db, callback) => {
   let collection = returnCollection(db, 'users');
-  collection.deleteOne({name: 'Daniel'}, (err, result) => {
-    assert.equal(1, result.deletedCount, 'Cannot delete user');
+  collection.findOneAndDelete({ _id: new ObjectID("5abf905d72fcbd99d15fe4ef") }, (err, result) => {
+    // console.log(err);
+    // assert.equal(1, result.deletedCount, 'Cannot delete todo');
+    console.log(result.value);
     callback('The user was successfully deleted');
   });
+
+  // collection.deleteMany({completed: true}, (err, result) => {
+  //   console.log(result);
+  // });
 };
 
-let updateUser = (db, callback) => {
+let updateDoc = (db, callback) => {
   let collection = returnCollection(db, 'users');
-  collection.updateOne({ name: 'Daniel' }, { $set: { age: 25 } }, (err, result) => {
-    assert.equal(null, err);
-    assert.notEqual(0, result.modifiedCount, 'User was not updated');
-    callback('User was successfully updated');
-  });
+  collection.findOneAndUpdate({ _id: new ObjectID("5abf907572fcbd99d15fe4f9") }, { $set: { name: 'The Fallen Witch' }, $inc: { age: 5 } }, { returnOriginal: false })
+    .then(result => {
+      console.log(result);
+    }, showResult);
 };
 
 let findUser = (db, callback) => {
