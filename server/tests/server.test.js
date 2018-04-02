@@ -1,14 +1,17 @@
-const expect = require("expect");
-const request = require("supertest");
+const expect = require('expect');
+const request = require('supertest');
 
-const { app } = require("../server");
-const { Todo } = require("../models/todo");
-const { User } = require("../models/user");
+const { ObjectID } = require('mongodb');
+const { app } = require('../server');
+const { Todo } = require('../models/todo');
+const { User } = require('../models/user');
 
 let todos = [{
-  text: "Go buy some weed"
+  _id: new ObjectID(),
+  text: 'Go buy some weed'
 }, {
-  text: "Go clean my room"
+  _id: new ObjectID(),
+  text: 'Go clean my room'
 }];
 
 beforeEach(done => {
@@ -17,11 +20,11 @@ beforeEach(done => {
   });
 });
 
-describe("POST /todos", () => {
-  it("should create a new todo", done => {
-    let text = "Do the laundry";
+describe('POST /todos', () => {
+  it('should create a new todo', done => {
+    let text = 'Do the laundry';
     request(app)
-      .post("/todos")
+      .post('/todos')
       .send({ text })
       .expect(201)
       .expect(res => {
@@ -40,13 +43,13 @@ describe("POST /todos", () => {
       });
   });
 
-  it("should not create todo with invalid body data", done => {
+  it('should not create todo with invalid body data', done => {
     request(app)
-      .post("/todos")
+      .post('/todos')
       .send()
       .expect(400)
       .expect(res => {
-        expect(res.text).toMatch(new RegExp("^Todo validation failed"));
+        expect(res.text).toMatch(new RegExp('^Todo validation failed'));
       })
       .end((err, res) => {
         if (err) return done(err);
@@ -61,14 +64,46 @@ describe("POST /todos", () => {
   });
 });
 
-describe("GET /todos", () => {
-  it("should fetch all todos", done => {
+describe('GET /todos', () => {
+  it('should fetch all todos', done => {
     request(app)
-      .get("/todos")
+      .get('/todos')
       .expect(200)
       .expect(res => {
         expect(res.body.todos.length).toBe(2);
       })
       .end(done);
   });
+});
+
+describe('GET /todos/:id', () => {
+
+  it('should return 404 when id is invalid', done => {
+    request(app)
+      .get('/todos/1')
+      .expect(404)
+      .end(done);
+  });
+
+  it('should return 404 when id is valid but not found', done => {
+    request(app)
+      .get(`/todos/${new ObjectID()}`)
+      .expect(404)
+      .end(done);
+  });
+
+  it('should return todo when id is valid', done => {
+
+    request(app)
+      .get(`/todos/${todos[0]._id}`)
+      .expect(200)
+      .expect(res => {
+        expect(res.body.todo._id).toEqual(todos[0]._id);
+        expect(res.body.todo.text).toBe(todos[0].text);
+      })
+      .end(done);
+
+  });
+
+
 });
