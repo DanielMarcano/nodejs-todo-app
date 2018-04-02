@@ -1,20 +1,13 @@
-const expect = require('expect');
-const request = require('supertest');
+const expect = require("expect");
+const request = require("supertest");
 
-const {
-  app
-} = require('../server');
-const {
-  Todo
-} = require('../models/todo');
-const {
-  User
-} = require('../models/user');
+const { app } = require("../server");
+const { Todo } = require("../models/todo");
+const { User } = require("../models/user");
 
 let todos = [{
   text: "Go buy some weed"
-},
-{
+}, {
   text: "Go clean my room"
 }];
 
@@ -24,15 +17,12 @@ beforeEach(done => {
   });
 });
 
-describe('POST /todos', () => {
-
-  it('should create a new todo', done => {
-    let text = 'Do the laundry';
+describe("POST /todos", () => {
+  it("should create a new todo", done => {
+    let text = "Do the laundry";
     request(app)
-      .post('/todos')
-      .send({
-        text
-      })
+      .post("/todos")
+      .send({ text })
       .expect(201)
       .expect(res => {
         expect(res.body.text).toBe(text);
@@ -40,46 +30,45 @@ describe('POST /todos', () => {
       .end((err, res) => {
         if (err) return done(err);
 
-        Todo.find({
-          text
-        }).then(todos => {
-          expect(todos.length).toBe(1);
-          expect(todos[0].text).toBe(text);
-          done();
-        }).catch(done);
+        Todo.find({ text })
+          .then(todos => {
+            expect(todos.length).toBe(1);
+            expect(todos[0].text).toBe(text);
+            done();
+          })
+          .catch(done);
       });
   });
 
-  it('should not create todo with invalid body data', done => {
+  it("should not create todo with invalid body data", done => {
     request(app)
-      .post('/todos')
+      .post("/todos")
       .send()
       .expect(400)
       .expect(res => {
-        expect(res.text).toMatch(new RegExp('^Todo validation failed'));
+        expect(res.text).toMatch(new RegExp("^Todo validation failed"));
       })
       .end((err, res) => {
         if (err) return done(err);
 
-        Todo.find().then(todos => {
-          expect(todos.length).toBe(2);
-          done();
-        }).catch(done);
+        Todo.find()
+          .then(todos => {
+            expect(todos.length).toBe(2);
+            done();
+          })
+          .catch(done);
       });
   });
-
 });
 
-describe('GET /todos', () => {
-
-  it('should fetch all todos', done => {
+describe("GET /todos", () => {
+  it("should fetch all todos", done => {
     request(app)
-      .get('/todos')
+      .get("/todos")
       .expect(200)
       .expect(res => {
         expect(res.body.todos.length).toBe(2);
       })
       .end(done);
   });
-
 });
