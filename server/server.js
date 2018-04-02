@@ -20,3 +20,5 @@ app.post('/todos', (req, res, next) => {
   todo.save().then(doc => res.status(201).send(doc), e => res.status(400).send(e.message));
 })
   .listen(port, () => console.log(`Server up and running at ${port}`));
+
+module.exports = { app };
