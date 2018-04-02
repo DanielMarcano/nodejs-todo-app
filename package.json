@@ -8,6 +8,9 @@
     "start": "node server/server.js",
     "test-watch": "nodemon --exec \"npm test\""
   },
+  "engines": {
+    "node": "9.8.0"
+  },
   "author": "Daniel Marcano",
   "license": "ISC",
   "dependencies": {
