@@ -131,15 +131,23 @@ describe('DELETE /todos/:id', () => {
 
   it('should return todo when it is found and deleted', done => {
 
+    let id = todos[0]._id;
+
     request(app)
-      .delete(`/todos/${todos[0]._id}`)
+      .delete(`/todos/${id}`)
       .expect(200)
       .expect(res => {
-        expect(res.body.todo._id).toEqual(todos[0]._id);
+        expect(res.body.todo._id).toEqual(id);
         expect(res.body.todo.text).toBe(todos[0].text);
         expect(res.body.message).toBe('Todo was successfully removed');
       })
-      .end(done);
+      .end((err, res) => {
+        if (err) return done(err);
+        Todo.findById(res.body.todo._id).then(todo => {
+          expect(todo).toNotExist();
+          done();
+        }).catch(done);
+      });
 
   });
 });
