@@ -34,7 +34,7 @@ app
     let id = req.params.id;
     if (!ObjectID.isValid(id)) return res.status(404).json({ error: 'Invalid id' });
     Todo.findById(id).then(todo => {
-      if (!todo) return res.status(404).json({ message: 'Todo could not be found' });
+      if (!todo) return res.status(404).json({ message: 'Todo not found' });
       res.status(200).json({ todo });
     }, e => res.status(400).send());
   })
@@ -43,7 +43,7 @@ app
     if (!ObjectID.isValid(id)) return res.status(404).json({ error: 'Invalid id' });
     Todo.findByIdAndRemove(id).then(todo => {
       if (!todo) return res.status(404).json({ message: 'Todo not found' });
-      res.status(200).json({ todo, message: 'The todo was removed successfully' });
+      res.status(200).json({ todo, message: 'Todo was successfully removed' });
     }, e => res.status(400).send());
   })
   .listen(port, () => console.log(`Server up and running at ${port}`));
