@@ -3,28 +3,15 @@ const request = require('supertest');
 const _ = require('lodash');
 
 const { ObjectID } = require('mongodb');
-// const { app } = require('../server');
+const { todos, populateTodos, users, populateUsers } = require('./seed/seed');
 const rewire = require('rewire');
 const appModule = rewire('../server');
 const app = appModule.__get__('app');
 const { Todo } = require('../models/todo');
 const { User } = require('../models/user');
 
-let todos = [{
-  _id: new ObjectID(),
-  text: 'Go get a life'
-}, {
-  _id: new ObjectID(),
-  text: 'Go write my first novel',
-  completed: true,
-  completedAt: 123
-}];
-
-beforeEach(done => {
-  Todo.remove().then(() => {
-    Todo.insertMany(todos).then(() => done(), done);
-  });
-});
+beforeEach(populateTodos);
+beforeEach(populateUsers);
 
 describe('POST /todos', () => {
   it('should create a new todo', done => {
@@ -229,4 +216,93 @@ describe('PATCH /todos/:id', () => {
       });
   });
 
+});
+
+describe('POST /users', () => {
+  it('should create a new user', done => {
+    let newUser = {
+      email: 'marceline@adv.com',
+      password: '123456'
+    };
+
+    request(app)
+      .post('/users')
+      .send(newUser)
+      .expect(201)
+      .expect(res => {
+        expect(res.headers['x-auth']).toExist();
+        expect(res.body).toIncludeKeys(['_id', 'email']);
+        expect(res.body.email).toEqual(newUser.email);
+      })
+      .end((err) => {
+        if (err) return done(err);
+        User.findOne({ email: newUser.email }).then(user => {
+          expect(user).toExist();
+          expect(user.password).toNotBe(newUser.password);
+          done();
+        }).catch(done);
+      });
+  });
+
+  it('should not create a new user with invalid password', done => {
+    let user = {
+      email: 'marceline@adv.com',
+      password: '12345'
+    };
+
+    request(app)
+      .post('/users')
+      .send(user)
+      .expect(400)
+      .expect(res => {
+        expect(res.body).toIncludeKeys(['error']);
+        expect(res.body.error).toMatch(new RegExp('^User validation failed'));
+      })
+      .end(done);
+  });
+
+  it('should not create a new user with used email', done => {
+    let user = {
+      email: users[1].email,
+      password: '123456'
+    };
+
+    request(app)
+      .post('/users')
+      .send(user)
+      .expect(400)
+      .expect(res => {
+        expect(res.body).toIncludeKeys(['error']);
+        expect(res.body.error).toMatch(new RegExp('duplicate key error'));
+      })
+      .end(done);
+  });
+});
+
+describe('GET /users/me', () => {
+  it('should retrieve user info', done => {
+
+    request(app)
+      .get('/users/me')
+      .set('x-auth', users[0].tokens[0].token)
+      .expect(200)
+      .expect(res => {
+        expect(res.body).toIncludeKeys(['_id', 'email']);
+        expect(res.body.email).toEqual(users[0].email);
+        expect(res.body._id).toEqual(users[0]._id);
+      })
+      .end(done);
+  });
+
+  it('should not retrieve user info', done => {
+
+    request(app)
+      .get('/users/me')
+      .expect(401)
+      .expect(res => {
+        expect(res.body).toIncludeKeys(['error']);
+        expect(res.body.error).toEqual('jwt must be provided');
+      })
+      .end(done);
+  });
 });

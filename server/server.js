@@ -76,7 +76,7 @@ app
     let user = new User(body);
     user.save()
       .then(() => user.generateAuthToken())
-      .then(token => res.header('x-auth', token).send(user))
+      .then(token => res.header('x-auth', token).status(201).send(user))
       .catch(e => res.status(400).send({ error: e.message }));
   })
   .get('/users/me', authenticate, (req, res) => {
