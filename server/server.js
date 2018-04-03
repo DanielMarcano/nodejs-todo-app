@@ -19,7 +19,6 @@ app.use(express.json());
 
 app
   .post('/todos', authenticate, (req, res) => {
-    showSomeshit('hello');
     let todo = new Todo({
       text: req.body.text,
       _creator: req.user._id

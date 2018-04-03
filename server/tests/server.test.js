@@ -16,15 +16,11 @@ beforeEach(populateUsers);
 describe('POST /todos', () => {
   it('should create a new todo', done => {
     let text = 'Do the laundry';
-    appModule.__set__('showSomeshit', expect.createSpy());
     request(app)
       .post('/todos')
       .set('x-auth', users[0].tokens[0].token)
       .send({ text })
       .expect(201)
-      .expect(res => {
-        expect(appModule.__get__('showSomeshit')).toHaveBeenCalled();
-      })
       .expect(res => {
         expect(res.body.text).toBe(text);
       })
@@ -101,7 +97,7 @@ describe('GET /todos/:id', () => {
       .set('x-auth', users[0].tokens[0].token)
       .expect(200)
       .expect(res => {
-        expect(res.body.todo._id).toEqual(todos[0]._id);
+        expect(res.body.todo._id).toEqual(todos[0]._id.toHexString());
         expect(res.body.todo.text).toBe(todos[0].text);
       })
       .end(done);
@@ -153,14 +149,14 @@ describe('DELETE /todos/:id', () => {
       .set('x-auth', users[0].tokens[0].token)
       .expect(200)
       .expect(res => {
-        expect(res.body.todo._id).toEqual(id);
+        expect(res.body.todo._id).toEqual(id.toHexString());
         expect(res.body.todo.text).toBe(todos[0].text);
         expect(res.body.message).toBe('Todo was successfully removed');
       })
       .end((err, res) => {
         if (err) return done(err);
         Todo.findById(res.body.todo._id).then(todo => {
-          expect(todo).toNotExist();
+          expect(todo).toBeFalsy();
           done();
         }).catch(done);
       });
@@ -213,7 +209,7 @@ describe('PATCH /todos/:id', () => {
       .send(todo)
       .expect(200)
       .expect(res => {
-        expect(res.body.todo.text).toNotBe(todos[0].text);
+        expect(res.body.todo.text).not.toBe(todos[0].text);
         expect(res.body.message).toBe('Todo was successfully updated');
       })
       .end((err, res) => {
@@ -236,15 +232,15 @@ describe('PATCH /todos/:id', () => {
       .send(todo)
 
       .expect(res => {
-        expect(res.body.todo.completedAt).toNotExist();
+        expect(res.body.todo.completedAt).toBeNull();
         expect(res.body.message).toBe('Todo was successfully updated');
       })
       .end((err, res) => {
         if (err) return done(err);
         Todo.findById(todos[1]._id).then(doc => {
-          expect(doc.completedAt).toNotExist();
+          expect(doc.completed).toBeFalsy();
           expect(doc.text).toBe(todo.text);
-          expect(doc.completedAt).toNotBe(todos[1].completedAt).toNotExist();
+          expect(doc.completedAt).toBeNull();
           done();
         }).catch(done);
       });
@@ -275,15 +271,15 @@ describe('POST /users', () => {
       .send(newUser)
       .expect(201)
       .expect(res => {
-        expect(res.headers['x-auth']).toExist();
-        expect(res.body).toIncludeKeys(['_id', 'email']);
+        expect(res.headers['x-auth']).toBeTruthy();
+        expect(res.body).toMatchObject({ '_id': expect.any(String), 'email': expect.any(String) });
         expect(res.body.email).toEqual(newUser.email);
       })
       .end((err) => {
         if (err) return done(err);
         User.findOne({ email: newUser.email }).then(user => {
-          expect(user).toExist();
-          expect(user.password).toNotBe(newUser.password);
+          expect(user).toBeTruthy();
+          expect(user.password).not.toBe(newUser.password);
           done();
         }).catch(done);
       });
@@ -300,7 +296,7 @@ describe('POST /users', () => {
       .send(user)
       .expect(400)
       .expect(res => {
-        expect(res.body).toIncludeKeys(['error']);
+        expect(res.body).toMatchObject({ 'error': expect.any(String) });
         expect(res.body.error).toMatch(new RegExp('^User validation failed'));
       })
       .end(done);
@@ -317,7 +313,7 @@ describe('POST /users', () => {
       .send(user)
       .expect(400)
       .expect(res => {
-        expect(res.body).toIncludeKeys(['error']);
+        expect(res.body).toMatchObject({ 'error': expect.any(String) });
         expect(res.body.error).toMatch(new RegExp('duplicate key error'));
       })
       .end(done);
@@ -327,29 +323,34 @@ describe('POST /users', () => {
 describe('GET /users/me', () => {
   it('should retrieve user info', done => {
 
+    let id = users[0]['_id'];
+    let email = users[0]['email'];
+
     request(app)
       .get('/users/me')
       .set('x-auth', users[0].tokens[0].token)
       .expect(200)
       .expect(res => {
-        expect(res.body).toIncludeKeys(['_id', 'email']);
-        expect(res.body.email).toEqual(users[0].email);
-        expect(res.body._id).toEqual(users[0]._id);
+        expect(res.body).toMatchObject({
+          '_id': expect.stringMatching(users[0]._id.toHexString()),
+          'email': expect.stringMatching(users[0].email)
+        });
       })
       .end(done);
   });
+});
 
-  it('should not retrieve user info', done => {
+it('should not retrieve user info', done => {
 
-    request(app)
-      .get('/users/me')
-      .expect(401)
-      .expect(res => {
-        expect(res.body).toIncludeKeys(['error']);
-        expect(res.body.error).toInclude({ message: 'jwt must be provided' });
-      })
-      .end(done);
-  });
+  request(app)
+    .get('/users/me')
+    .expect(401)
+    .expect(res => {
+      expect(res.body.error).toEqual(
+        expect.objectContaining({ name: expect.any(String), message: 'jwt must be provided' })
+      );
+    })
+    .end(done);
 });
 
 describe('POST /users/login', () => {
@@ -359,13 +360,13 @@ describe('POST /users/login', () => {
       .send(users[1])
       .expect(200)
       .expect(res => {
-        expect(res.header['x-auth']).toExist();
+        expect(res.header['x-auth']).toBeTruthy();
       })
       .end((err, res) => {
         if (err) return done(err);
         User.findById(users[1]._id)
           .then(user => {
-            expect(user.tokens[0]).toInclude({
+            expect(user.tokens[0]).toMatchObject({
               access: 'auth',
               token: res.header['x-auth']
             });
@@ -382,7 +383,7 @@ describe('POST /users/login', () => {
       .send(user)
       .expect(400)
       .expect(res => {
-        expect(res.header['x-auth']).toNotExist();
+        expect(res.header['x-auth']).toBeFalsy();
       })
       .end(done);
   });
@@ -399,7 +400,7 @@ describe('DELETE /users/me/token', () => {
         User.findById(users[0]._id)
           .then(user => {
             if (!user) return done(new Error('User not found'));
-            expect(user.tokens[0]).toNotExist();
+            expect(user.tokens[0]).toBeFalsy();
             done();
           }).catch(done);
       });
@@ -415,7 +416,7 @@ describe('DELETE /users/me/token', () => {
         User.findById(users[0]._id)
           .then(user => {
             if (!user) return done(new Error('User not found'));
-            expect(user.tokens[0]).toInclude({
+            expect(user.tokens[0]).toMatchObject({
               access: 'auth',
               token: users[0].tokens[0].token
             });
