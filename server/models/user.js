@@ -33,6 +33,18 @@ const UserSchema = new mongoose.Schema({
   }]
 });
 
+UserSchema.statics.findByCredentials = function({ email, password }) {
+  return User.findOne({ email })
+    .then(user => {
+      if (!user) return Promise.reject('User not found');
+      return bcrypt.compare(password, user.password)
+        .then(result => {
+          if (!result) return Promise.reject('Password does not match');
+          return user;
+        });
+    });
+};
+
 UserSchema.statics.findByToken = function(token) {
 
   let decode;
