@@ -1,6 +1,7 @@
 require('./config/config');
 const express = require('express');
 const _ = require('lodash');
+const { authenticate } = require('./middleware/authenticate');
 
 const { ObjectID } = require('mongodb');
 const { mongoose } = require('./db/mongoose');
@@ -77,6 +78,9 @@ app
       .then(() => user.generateAuthToken())
       .then(token => res.header('x-auth', token).send(user))
       .catch(e => res.status(400).send({ error: e.message }));
+  })
+  .get('/users/me', authenticate, (req, res) => {
+    res.send(req.user);
   })
   .listen(port, () => console.log(`Server up and running at ${port}`));
 
