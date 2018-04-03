@@ -10,11 +10,14 @@ const { User } = require('./models/user');
 const app = express();
 const port = process.env.PORT;
 
+const showSomeshit = someshit => console.log(someshit);
+
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 app
   .post('/todos', (req, res) => {
+    showSomeshit('hello');
     let todo = new Todo({
       text: req.body.text
     });
@@ -66,6 +69,14 @@ app
   })
   .get('/', (req, res) => {
     res.status(200).send('Hello there');
+  })
+  .post('/users', (req, res) => {
+    let body = _.pick(req.body, ['email', 'password']);
+    let user = new User(body);
+    user.save()
+      .then(() => user.generateAuthToken())
+      .then(token => res.header('x-auth', token).send(user))
+      .catch(e => res.status(400).send({ error: e.message }));
   })
   .listen(port, () => console.log(`Server up and running at ${port}`));
 

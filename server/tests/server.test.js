@@ -3,7 +3,10 @@ const request = require('supertest');
 const _ = require('lodash');
 
 const { ObjectID } = require('mongodb');
-const { app } = require('../server');
+// const { app } = require('../server');
+const rewire = require('rewire');
+const appModule = rewire('../server');
+const app = appModule.__get__('app');
 const { Todo } = require('../models/todo');
 const { User } = require('../models/user');
 
@@ -26,10 +29,14 @@ beforeEach(done => {
 describe('POST /todos', () => {
   it('should create a new todo', done => {
     let text = 'Do the laundry';
+    appModule.__set__('showSomeshit', expect.createSpy());
     request(app)
       .post('/todos')
       .send({ text })
       .expect(201)
+      .expect(res => {
+        expect(appModule.__get__('showSomeshit')).toHaveBeenCalled();
+      })
       .expect(res => {
         expect(res.body.text).toBe(text);
       })
