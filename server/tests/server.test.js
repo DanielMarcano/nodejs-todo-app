@@ -1,5 +1,6 @@
 const expect = require('expect');
 const request = require('supertest');
+const _ = require('lodash');
 
 const { ObjectID } = require('mongodb');
 const { app } = require('../server');
@@ -11,7 +12,9 @@ let todos = [{
   text: 'Go get a life'
 }, {
   _id: new ObjectID(),
-  text: 'Go write my first novel'
+  text: 'Go write my first novel',
+  completed: true,
+  completedAt: 123
 }];
 
 beforeEach(done => {
@@ -150,4 +153,73 @@ describe('DELETE /todos/:id', () => {
       });
 
   });
+});
+
+describe('PATCH /todos/:id', () => {
+
+  it('should return 404 when id is invalid', done => {
+    request(app)
+      .patch('/todos/1')
+      .expect(404)
+      .expect(res => {
+        expect(res.body.error).toBe('Invalid id');
+      })
+      .end(done);
+  });
+
+  it('should return 404 when id is valid but not found', done => {
+    request(app)
+      .patch(`/todos/${new ObjectID()}`)
+      .expect(404)
+      .expect(res => {
+        expect(res.body.message).toBe('Todo not found');
+      })
+      .end(done);
+  });
+
+  it('should update the todo', done => {
+    let todo = _.pick(todos[1], ['text', 'completed']);
+    todo.text = 'This is my updated text';
+    request(app)
+      .patch(`/todos/${todos[1]._id}`)
+      .send(todo)
+      .expect(200)
+      .expect(res => {
+        expect(res.body.todo.completedAt).toNotBe(todos[1].completedAt).toExist();
+        expect(res.body.todo.completed).toBe(todos[1].completed);
+        expect(res.body.message).toBe('Todo was successfully updated');
+      })
+      .end((err, res) => {
+        if (err) return done(err);
+        Todo.findById(todos[1]._id).then(doc => {
+          expect(doc.completedAt).toNotBe(null);
+          expect(doc.text).toBe(todo.text);
+          expect(doc.completedAt).toNotBe(todos[1].completedAt).toBeA('number');
+          done();
+        }).catch(done);
+      });
+  });
+
+  it('should clear completedAt when todo is not completed', done => {
+    let todo = _.pick(todos[1], ['text', 'completed']);
+    todo.completed = false;
+    request(app)
+      .patch(`/todos/${todos[1]._id}`)
+      .send(todo)
+      .expect(200)
+      .expect(res => {
+        expect(res.body.todo.completedAt).toNotExist();
+        expect(res.body.message).toBe('Todo was successfully updated');
+      })
+      .end((err, res) => {
+        if (err) return done(err);
+        Todo.findById(todos[1]._id).then(doc => {
+          expect(doc.completedAt).toNotExist();
+          expect(doc.text).toBe(todo.text);
+          expect(doc.completedAt).toNotBe(todos[1].completedAt);
+          done();
+        }).catch(done);
+      });
+  });
+
 });
