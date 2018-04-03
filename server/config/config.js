@@ -1,15 +1,13 @@
 const env = process.env.NODE_ENV || 'development';
 
-switch (env) {
-  case 'production':
-    process.env.MONGODB_URL = 'mongodb://dbdan:123456@ds231529.mlab.com:31529/todo-app';
-    break;
-  case 'development':
-    process.env.PORT = 3000;
-    process.env.MONGODB_URL = 'mongodb://localhost:27017/TodoApp';
-    break;
-  case 'test':
-    process.env.PORT = 3000;
-    process.env.MONGODB_URL = 'mongodb://localhost:27017/TodoAppTest';
-    break;
+if (env === 'test' || env === 'development') {
+  let config = require('./config.json');
+  let configEnv = config[env];
+  Object.keys(configEnv).forEach(key => {
+    process.env[key] = configEnv[key];
+  });
 }
+
+// case 'production':
+//   process.env.MONGODB_URL = 'mongodb://dbdan:123456@ds231529.mlab.com:31529/todo-app';
+//   break;

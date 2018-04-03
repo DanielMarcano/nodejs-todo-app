@@ -1,12 +1,12 @@
+const rewire = require('rewire');
+const appModule = rewire('../server');
+const app = appModule.__get__('app');
 const expect = require('expect');
 const request = require('supertest');
 const _ = require('lodash');
 
 const { ObjectID } = require('mongodb');
 const { todos, populateTodos, users, populateUsers } = require('./seed/seed');
-const rewire = require('rewire');
-const appModule = rewire('../server');
-const app = appModule.__get__('app');
 const { Todo } = require('../models/todo');
 const { User } = require('../models/user');
 
@@ -346,7 +346,7 @@ describe('GET /users/me', () => {
       .expect(401)
       .expect(res => {
         expect(res.body).toIncludeKeys(['error']);
-        expect(res.body.error).toEqual('jwt must be provided');
+        expect(res.body.error).toInclude({ message: 'jwt must be provided' });
       })
       .end(done);
   });
