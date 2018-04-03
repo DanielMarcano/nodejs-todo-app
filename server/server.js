@@ -20,16 +20,14 @@ app
     });
     todo.save()
       .then(
-        doc => res.status(201).send(doc),
-        e => res.status(400).send(e.message)
-      );
+        doc => res.status(201).send(doc))
+      .catch(e => res.status(400).send(e.message));
   })
   .get('/todos', (req, res) => {
     Todo.find()
       .then(
-        todos => res.status(200).send({ todos }),
-        e => res.status(400).send()
-      );
+        todos => res.status(200).send({ todos }))
+      .catch(e => res.status(400).send());
   })
   .get('/todos/:id', (req, res) => {
     let id = req.params.id;
@@ -37,7 +35,7 @@ app
     Todo.findById(id).then(todo => {
       if (!todo) return res.status(404).json({ message: 'Todo not found' });
       res.status(200).json({ todo });
-    }, e => res.status(400).send());
+    }).catch(e => res.status(400).send());
   })
   .delete('/todos/:id', (req, res) => {
     let id = req.params.id;
@@ -45,7 +43,7 @@ app
     Todo.findByIdAndRemove(id).then(todo => {
       if (!todo) return res.status(404).json({ message: 'Todo not found' });
       res.status(200).json({ todo, message: 'Todo was successfully removed' });
-    }, e => res.status(400).send());
+    }).catch(e => res.status(400).send());
   })
   .patch('/todos/:id', (req, res) => {
     let id = req.params.id;
@@ -64,7 +62,10 @@ app
     Todo.findByIdAndUpdate(id, body, { new: true }).then(todo => {
       if (!todo) return res.status(404).json({ message: 'Todo not found' });
       res.status(200).json({ todo, message: 'Todo was successfully updated' });
-    }, e => res.status(400).send());
+    }).catch(e => res.status(400).send());
+  })
+  .get('/', (req, res) => {
+    res.status(200).send('Hello there');
   })
   .listen(port, () => console.log(`Server up and running at ${port}`));
 
