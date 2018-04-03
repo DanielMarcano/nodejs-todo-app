@@ -8,10 +8,10 @@ const { User } = require('../models/user');
 
 let todos = [{
   _id: new ObjectID(),
-  text: 'Go buy some weed'
+  text: 'Go get a life'
 }, {
   _id: new ObjectID(),
-  text: 'Go clean my room'
+  text: 'Go write my first novel'
 }];
 
 beforeEach(done => {
