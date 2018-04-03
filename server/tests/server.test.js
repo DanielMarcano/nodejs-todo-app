@@ -330,7 +330,7 @@ describe('POST /users/login', () => {
   });
   it('should not login user with wrong password nor return x-auth header', done => {
     let user = users[1];
-    user.password = 'webb';
+    user.password = 'webbitt';
     request(app)
       .post('/users/login')
       .send(user)
@@ -343,6 +343,43 @@ describe('POST /users/login', () => {
         User.findById(users[1]._id)
           .then(user => {
             expect(user.tokens[0]).toNotExist();
+            done();
+          }).catch(done);
+      });
+  });
+});
+
+describe('DELETE /users/me/token', () => {
+  it('should delete the token of the user', done => {
+    request(app)
+      .delete('/users/me/token')
+      .set('x-auth', users[0].tokens[0].token)
+      .expect(200)
+      .end((err, res) => {
+        if (err) return done(err);
+        User.findById(users[0]._id)
+          .then(user => {
+            if (!user) return done(new Error('User not found'));
+            expect(user.tokens[0]).toNotExist();
+            done();
+          }).catch(done);
+      });
+  });
+
+  it('should not delete the token of the user', done => {
+    request(app)
+      .delete('/users/me/token')
+      .set('x-auth', users[0].tokens[0].token + 'b')
+      .expect(401)
+      .end((err, res) => {
+        if (err) return done(err);
+        User.findById(users[0]._id)
+          .then(user => {
+            if (!user) return done(new Error('User not found'));
+            expect(user.tokens[0]).toInclude({
+              access: 'auth',
+              token: users[0].tokens[0].token
+            });
             done();
           }).catch(done);
       });
