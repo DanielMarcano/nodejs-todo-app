@@ -71,7 +71,7 @@ UserSchema.methods.generateAuthToken = function() {
   let access = 'auth';
   let token = jwt.sign({ _id: user._id, access }, 'abc123').toString();
   user.tokens = user.tokens.concat([{ token, access }]);
-  return user.save().then(() => token);
+  return user.save().then(user => user.tokens[0].token);
 };
 
 UserSchema.methods.removeToken = function(token) {

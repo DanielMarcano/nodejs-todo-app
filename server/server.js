@@ -18,39 +18,49 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 app
-  .post('/todos', (req, res) => {
+  .post('/todos', authenticate, (req, res) => {
     showSomeshit('hello');
     let todo = new Todo({
-      text: req.body.text
+      text: req.body.text,
+      _creator: req.user._id
     });
     todo.save()
       .then(
         doc => res.status(201).send(doc))
       .catch(e => res.status(400).send(e.message));
   })
-  .get('/todos', (req, res) => {
-    Todo.find()
+  .get('/todos', authenticate, (req, res) => {
+    Todo.find({
+        _creator: req.user._id
+      })
       .then(
         todos => res.status(200).send({ todos }))
       .catch(e => res.status(400).send());
   })
-  .get('/todos/:id', (req, res) => {
+  .get('/todos/:id', authenticate, (req, res) => {
     let id = req.params.id;
     if (!ObjectID.isValid(id)) return res.status(404).json({ error: 'Invalid id' });
-    Todo.findById(id).then(todo => {
-      if (!todo) return res.status(404).json({ message: 'Todo not found' });
-      res.status(200).json({ todo });
-    }).catch(e => res.status(400).send());
+    Todo.findOne({
+        _id: id,
+        _creator: req.user._id
+      })
+      .then(todo => {
+        if (!todo) throw new Error('Todo not found');
+        res.status(200).json({ todo });
+      }).catch(e => res.status(400).send(e.message));
   })
-  .delete('/todos/:id', (req, res) => {
+  .delete('/todos/:id', authenticate, (req, res) => {
     let id = req.params.id;
     if (!ObjectID.isValid(id)) return res.status(404).json({ error: 'Invalid id' });
-    Todo.findByIdAndRemove(id).then(todo => {
+    Todo.findOneAndRemove({
+      _id: id,
+      _creator: req.user._id
+    }).then(todo => {
       if (!todo) return res.status(404).json({ message: 'Todo not found' });
       res.status(200).json({ todo, message: 'Todo was successfully removed' });
     }).catch(e => res.status(400).send());
   })
-  .patch('/todos/:id', (req, res) => {
+  .patch('/todos/:id', authenticate, (req, res) => {
     let id = req.params.id;
 
     if (!ObjectID.isValid(id)) return res.status(404).json({ error: 'Invalid id' });
@@ -64,7 +74,7 @@ app
       body.completedAt = null;
     }
 
-    Todo.findByIdAndUpdate(id, body, { new: true }).then(todo => {
+    Todo.findOneAndUpdate({ _id: id, _creator: req.user._id }, body, { new: true }).then(todo => {
       if (!todo) return res.status(404).json({ message: 'Todo not found' });
       res.status(200).json({ todo, message: 'Todo was successfully updated' });
     }).catch(e => res.status(400).send());

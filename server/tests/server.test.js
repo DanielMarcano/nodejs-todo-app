@@ -19,6 +19,7 @@ describe('POST /todos', () => {
     appModule.__set__('showSomeshit', expect.createSpy());
     request(app)
       .post('/todos')
+      .set('x-auth', users[0].tokens[0].token)
       .send({ text })
       .expect(201)
       .expect(res => {
@@ -43,6 +44,7 @@ describe('POST /todos', () => {
   it('should not create todo with invalid body data', done => {
     request(app)
       .post('/todos')
+      .set('x-auth', users[0].tokens[0].token)
       .send()
       .expect(400)
       .expect(res => {
@@ -65,9 +67,10 @@ describe('GET /todos', () => {
   it('should fetch all todos', done => {
     request(app)
       .get('/todos')
+      .set('x-auth', users[0].tokens[0].token)
       .expect(200)
       .expect(res => {
-        expect(res.body.todos.length).toBe(2);
+        expect(res.body.todos.length).toBe(1);
       })
       .end(done);
   });
@@ -75,9 +78,10 @@ describe('GET /todos', () => {
 
 describe('GET /todos/:id', () => {
 
-  it('should return 404 when id is invalid', done => {
+  it('should return 400 when id is invalid', done => {
     request(app)
       .get('/todos/1')
+      .set('x-auth', users[0].tokens[0].token)
       .expect(404)
       .end(done);
   });
@@ -85,7 +89,8 @@ describe('GET /todos/:id', () => {
   it('should return 404 when id is valid but not found', done => {
     request(app)
       .get(`/todos/${new ObjectID()}`)
-      .expect(404)
+      .set('x-auth', users[0].tokens[0].token)
+      .expect(400)
       .end(done);
   });
 
@@ -93,11 +98,22 @@ describe('GET /todos/:id', () => {
 
     request(app)
       .get(`/todos/${todos[0]._id}`)
+      .set('x-auth', users[0].tokens[0].token)
       .expect(200)
       .expect(res => {
         expect(res.body.todo._id).toEqual(todos[0]._id);
         expect(res.body.todo.text).toBe(todos[0].text);
       })
+      .end(done);
+
+  });
+
+  it('should not return todo created by other user', done => {
+
+    request(app)
+      .get(`/todos/${todos[0]._id}`)
+      .set('x-auth', users[1].tokens[0].token)
+      .expect(400)
       .end(done);
 
   });
@@ -109,6 +125,7 @@ describe('DELETE /todos/:id', () => {
   it('should return 404 when id is invalid', done => {
     request(app)
       .delete('/todos/1')
+      .set('x-auth', users[0].tokens[0].token)
       .expect(404)
       .expect(res => {
         expect(res.body.error).toBe('Invalid id');
@@ -119,6 +136,7 @@ describe('DELETE /todos/:id', () => {
   it('should return 404 when id is valid but not found', done => {
     request(app)
       .delete(`/todos/${new ObjectID()}`)
+      .set('x-auth', users[0].tokens[0].token)
       .expect(404)
       .expect(res => {
         expect(res.body.message).toBe('Todo not found');
@@ -132,6 +150,7 @@ describe('DELETE /todos/:id', () => {
 
     request(app)
       .delete(`/todos/${id}`)
+      .set('x-auth', users[0].tokens[0].token)
       .expect(200)
       .expect(res => {
         expect(res.body.todo._id).toEqual(id);
@@ -147,6 +166,18 @@ describe('DELETE /todos/:id', () => {
       });
 
   });
+
+  it('should not delete todo created by another user', done => {
+
+    let id = todos[0]._id;
+
+    request(app)
+      .delete(`/todos/${id}`)
+      .set('x-auth', users[1].tokens[0].token)
+      .expect(404)
+      .end(done);
+  });
+
 });
 
 describe('PATCH /todos/:id', () => {
@@ -154,6 +185,7 @@ describe('PATCH /todos/:id', () => {
   it('should return 404 when id is invalid', done => {
     request(app)
       .patch('/todos/1')
+      .set('x-auth', users[0].tokens[0].token)
       .expect(404)
       .expect(res => {
         expect(res.body.error).toBe('Invalid id');
@@ -164,6 +196,7 @@ describe('PATCH /todos/:id', () => {
   it('should return 404 when id is valid but not found', done => {
     request(app)
       .patch(`/todos/${new ObjectID()}`)
+      .set('x-auth', users[0].tokens[0].token)
       .expect(404)
       .expect(res => {
         expect(res.body.message).toBe('Todo not found');
@@ -172,23 +205,23 @@ describe('PATCH /todos/:id', () => {
   });
 
   it('should update the todo', done => {
-    let todo = _.pick(todos[1], ['text', 'completed']);
+    let todo = _.pick(todos[0], ['text', 'completed']);
     todo.text = 'This is my updated text';
     request(app)
-      .patch(`/todos/${todos[1]._id}`)
+      .patch(`/todos/${todos[0]._id}`)
+      .set('x-auth', users[0].tokens[0].token)
       .send(todo)
       .expect(200)
       .expect(res => {
-        expect(res.body.todo.completedAt).toNotBe(todos[1].completedAt).toExist();
-        expect(res.body.todo.completed).toBe(todos[1].completed);
+        expect(res.body.todo.text).toNotBe(todos[0].text);
         expect(res.body.message).toBe('Todo was successfully updated');
       })
       .end((err, res) => {
         if (err) return done(err);
-        Todo.findById(todos[1]._id).then(doc => {
-          expect(doc.completedAt).toNotBe(null);
+        Todo.findById(todos[0]._id).then(doc => {
+          if (!doc) throw new Error('Todo not found');
           expect(doc.text).toBe(todo.text);
-          expect(doc.completedAt).toNotBe(todos[1].completedAt).toBeA('number');
+          expect(doc._creator).toEqual(users[0]._id);
           done();
         }).catch(done);
       });
@@ -199,8 +232,9 @@ describe('PATCH /todos/:id', () => {
     todo.completed = false;
     request(app)
       .patch(`/todos/${todos[1]._id}`)
+      .set('x-auth', users[1].tokens[0].token)
       .send(todo)
-      .expect(200)
+
       .expect(res => {
         expect(res.body.todo.completedAt).toNotExist();
         expect(res.body.message).toBe('Todo was successfully updated');
@@ -210,10 +244,21 @@ describe('PATCH /todos/:id', () => {
         Todo.findById(todos[1]._id).then(doc => {
           expect(doc.completedAt).toNotExist();
           expect(doc.text).toBe(todo.text);
-          expect(doc.completedAt).toNotBe(todos[1].completedAt);
+          expect(doc.completedAt).toNotBe(todos[1].completedAt).toNotExist();
           done();
         }).catch(done);
       });
+  });
+
+  it('should not update todo created by another user', done => {
+    let todo = _.pick(todos[0], ['text', 'completed']);
+    todo.text = 'This is my updated text';
+    request(app)
+      .patch(`/todos/${todos[0]._id}`)
+      .set('x-auth', users[1].tokens[0].token)
+      .send(todo)
+      .expect(404)
+      .end(done);
   });
 
 });
@@ -324,6 +369,7 @@ describe('POST /users/login', () => {
               access: 'auth',
               token: res.header['x-auth']
             });
+            expect(user.tokens.length).toBe(2);
             done();
           }).catch(done);
       });
@@ -338,14 +384,7 @@ describe('POST /users/login', () => {
       .expect(res => {
         expect(res.header['x-auth']).toNotExist();
       })
-      .end((err, res) => {
-        if (err) return done(err);
-        User.findById(users[1]._id)
-          .then(user => {
-            expect(user.tokens[0]).toNotExist();
-            done();
-          }).catch(done);
-      });
+      .end(done);
   });
 });
 
