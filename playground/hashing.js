@@ -1,9 +1,11 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
-let data = {
-  id: 5
-};
+let password = 'cookies from hell';
 
-let token = jwt.sign(data, 'mydirtylittlesecret');
-
-console.log(token);
+bcrypt.genSalt(10, (err, salt) => {
+  bcrypt.hash(password, salt, (err, hash) => {
+    console.log(hash);
+    console.log(bcrypt.compareSync(password, hash));
+  });
+});
