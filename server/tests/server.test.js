@@ -42,8 +42,9 @@ describe('POST /todos', () => {
       .post('/todos')
       .set('x-auth', users[0].tokens[0].token)
       .send()
-      .expect(400)
+      .expect(500)
       .expect(res => {
+        console.log(res.text);
         expect(res.text).toMatch(new RegExp('^Todo validation failed'));
       })
       .end((err, res) => {
@@ -86,7 +87,7 @@ describe('GET /todos/:id', () => {
     request(app)
       .get(`/todos/${new ObjectID()}`)
       .set('x-auth', users[0].tokens[0].token)
-      .expect(400)
+      .expect(500)
       .end(done);
   });
 
@@ -109,7 +110,7 @@ describe('GET /todos/:id', () => {
     request(app)
       .get(`/todos/${todos[0]._id}`)
       .set('x-auth', users[1].tokens[0].token)
-      .expect(400)
+      .expect(500)
       .end(done);
 
   });
@@ -294,7 +295,7 @@ describe('POST /users', () => {
     request(app)
       .post('/users')
       .send(user)
-      .expect(400)
+      .expect(500)
       .expect(res => {
         expect(res.body).toMatchObject({ 'error': expect.any(String) });
         expect(res.body.error).toMatch(new RegExp('^User validation failed'));
@@ -311,7 +312,7 @@ describe('POST /users', () => {
     request(app)
       .post('/users')
       .send(user)
-      .expect(400)
+      .expect(500)
       .expect(res => {
         expect(res.body).toMatchObject({ 'error': expect.any(String) });
         expect(res.body.error).toMatch(new RegExp('duplicate key error'));
@@ -381,7 +382,7 @@ describe('POST /users/login', () => {
     request(app)
       .post('/users/login')
       .send(user)
-      .expect(400)
+      .expect(500)
       .expect(res => {
         expect(res.header['x-auth']).toBeFalsy();
       })

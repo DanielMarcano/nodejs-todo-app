@@ -33,16 +33,14 @@ const UserSchema = new mongoose.Schema({
   }]
 });
 
-UserSchema.statics.findByCredentials = function({ email, password }) {
-  return User.findOne({ email })
-    .then(user => {
-      if (!user) return Promise.reject('User not found');
-      return bcrypt.compare(password, user.password)
-        .then(result => {
-          if (!result) return Promise.reject('Password does not match');
-          return user;
-        });
-    });
+UserSchema.statics.findByCredentials = async function({ email, password }) {
+  const user = await User.findOne({ email });
+  if (!user) throw new Error('User not found');
+
+  const result = await bcrypt.compare(password, user.password);
+  if (!result) throw new Error('Password does not match');
+
+  return user;
 };
 
 UserSchema.statics.findByToken = function(token) {
@@ -52,10 +50,10 @@ UserSchema.statics.findByToken = function(token) {
   try {
     decode = jwt.verify(token, process.env.JWT_SECRET);
   } catch (e) {
-    return Promise.reject(e);
+    throw e;
   }
   return this.findOne({
-    '_id': decode._id,
+    _id: decode._id,
     'tokens.token': token,
     'tokens.access': decode.access
   });
@@ -66,36 +64,35 @@ UserSchema.methods.toJSON = function() {
   return _.pick(user, ['_id', 'email']);
 };
 
-UserSchema.methods.generateAuthToken = function() {
-  let user = this;
-  let access = 'auth';
-  let token = jwt.sign({ _id: user._id, access }, process.env.JWT_SECRET).toString();
+UserSchema.methods.generateAuthToken = async function() {
+  const user = this;
+  const access = 'auth';
+  const token = jwt.sign({ _id: user._id, access }, process.env.JWT_SECRET).toString();
   user.tokens = user.tokens.concat([{ token, access }]);
-  return user.save().then(user => user.tokens[0].token);
+  await user.save();
+  return user.tokens[0].token;
 };
 
-UserSchema.methods.removeToken = function(token) {
-  return this.update({
+UserSchema.methods.removeToken = async function(token) {
+  await this.update({
     $pull: {
       tokens: { token }
     }
   });
 };
 
-
-
-UserSchema.pre('save', function(next) {
+UserSchema.pre('save', async function(next) {
 
   if (this.isModified('password')) {
-    let password = this.password;
-    bcrypt.genSalt(10, (err, salt) => {
-      if (err) throw new Error(err);
-      bcrypt.hash(password, salt, (err, hash) => {
-        if (err) throw new Error(err);
-        this.password = hash;
-        next();
-      });
-    });
+    try {
+      const password = this.password;
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(password, salt);
+      this.password = hash;
+      next();
+    } catch (e) {
+      throw new Error(e);
+    }
   } else {
     next();
   }
